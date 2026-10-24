@@ -1,10 +1,13 @@
-name: Sync upstream
+name: Sync upstream & Build
 
 # 自动跟随主仓库 PCL-Community/PCL-CE 的 dev 分支：
 #   1. 拉取上游最新代码
 #   2. 重新应用 custom/pcl-ce-custom.patch（社区化修改）
 #   3. 强推覆盖本仓库的 dev 分支
-# 上游没有更新时不会产生任何提交。
+#   4. 构建单文件 exe 并刷新 Release: community-latest
+#
+# 注意：构建必须放在同一个 workflow 里。GitHub 规定用 GITHUB_TOKEN 推送的提交
+# 不会触发其它 workflow，拆成两个文件时第二段永远不会跑。
 
 on:
   schedule:
@@ -14,7 +17,6 @@ on:
 
 permissions:
   contents: write
-  issues: write
 
 concurrency:
   group: sync-upstream
@@ -23,6 +25,8 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.sync.outputs.updated }}
     steps:
       - name: Checkout dev
         uses: actions/checkout@v4
@@ -48,7 +52,6 @@ jobs:
           KEEP="$(mktemp -d)"
           mkdir -p "$KEEP/.github/workflows" "$KEEP/custom"
           cp .github/workflows/sync-upstream.yml "$KEEP/.github/workflows/"
-          cp .github/workflows/build-community.yml "$KEEP/.github/workflows/"
           cp custom/*.patch "$KEEP/custom/"
 
           # 完全回到上游状态
@@ -82,20 +85,49 @@ jobs:
           git push --force origin dev
 
           echo "updated=true" >> "$GITHUB_OUTPUT"
-          echo "upstream_sha=$(git rev-parse upstream/dev)" >> "$GITHUB_OUTPUT"
 
-      - name: Report failure
-        if: failure()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  build:
+    needs: sync
+    if: needs.sync.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
         run: |
-          gh issue create \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "自动同步失败：补丁与上游冲突 $(date -u +%Y-%m-%d)" \
-            --body "上游 PCL-Community/PCL-CE 的 dev 分支改动与 custom/pcl-ce-custom.patch 冲突，自动同步已停止。
+          dotnet publish "Plain Craft Launcher 2/Plain Craft Launcher 2.csproj" \
+            -c Release \
+            -p:Platform=x64 \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -o ./artifact
 
-            请查看失败的运行日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Rename
+        run: |
+          cp "./artifact/Plain Craft Launcher 2.exe" ./PCL2_CE_Community.exe
+          ls -lh ./PCL2_CE_Community.exe
 
-            处理方式：更新 custom/pcl-ce-custom.patch 使其适配上游新代码。" \
-            || true
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: community-latest
+          name: Community Build (自动构建)
+          prerelease: true
+          files: ./PCL2_CE_Community.exe
+          body: |
+            由 GitHub Actions 自动构建。
+
+            - 基于主仓库 PCL-Community/PCL-CE 的 dev 分支
+            - 已应用 `custom/pcl-ce-custom.patch`
+            - 提交：${{ github.sha }}
