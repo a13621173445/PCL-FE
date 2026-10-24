@@ -103,19 +103,20 @@ index d62dcb2..049cb24 100644
  
      <!-- Setup.About.SpecialThanks -->
 diff --git a/PCL.Core/IO/Net/Http/HttpSenderExtension.cs b/PCL.Core/IO/Net/Http/HttpSenderExtension.cs
-index e994e43..7fd54f8 100644
+index e994e43..01eab3a 100644
 --- a/PCL.Core/IO/Net/Http/HttpSenderExtension.cs
 +++ b/PCL.Core/IO/Net/Http/HttpSenderExtension.cs
-@@ -26,7 +26,8 @@ public static class HttpSenderExtension
+@@ -26,8 +26,8 @@ public static class HttpSenderExtension
              if(addMetedata)
              {
                  request
 -                    .WithHeader("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)")
-+                    // 不携带版本号，避免被用于统计各版本的用户数量
-+                    .WithHeader("User-Agent", "PCL2 PCL-FE")
-                     .WithHeader("Referer", $"https://{Basics.VersionCode}.ce.open.pcl2.server/");
+-                    .WithHeader("Referer", $"https://{Basics.VersionCode}.ce.open.pcl2.server/");
++                    // 不携带版本号与 Referer，避免被用于统计各版本的用户数量
++                    .WithHeader("User-Agent", "PCL2 PCL-FE");
              }
  
+             var requestId = Guid.NewGuid().ToString();
 diff --git a/PCL.Core/Utils/OS/AumidHelper.cs b/PCL.Core/Utils/OS/AumidHelper.cs
 index 59a2a27..82b34e9 100644
 --- a/PCL.Core/Utils/OS/AumidHelper.cs
