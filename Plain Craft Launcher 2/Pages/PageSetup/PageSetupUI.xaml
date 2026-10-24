@@ -290,17 +290,14 @@
                             <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="1*" />
-                            <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="0.2*" />
                         </Grid.ColumnDefinitions>
                         <local:MyRadioBox Text="{DynamicResource Setup.Ui.Homepage.Blank}" x:Name="RadioCustomType0" Height="22" Tag="UiCustomType/0"
                                           Grid.Column="0" Check="RadioBoxChange" />
-                        <local:MyRadioBox Text="{DynamicResource Setup.Ui.Homepage.Preset}" x:Name="RadioCustomType3" Height="22" Tag="UiCustomType/3"
-                                          Grid.Column="1" Check="RadioBoxChange" />
                         <local:MyRadioBox Text="{DynamicResource Setup.Ui.Homepage.LocalFile}" x:Name="RadioCustomType1" Height="22" Tag="UiCustomType/1"
-                                          Grid.Column="2" Check="RadioBoxChange" />
+                                          Grid.Column="1" Check="RadioBoxChange" />
                         <local:MyRadioBox Text="{DynamicResource Setup.Ui.Homepage.NetUpdate}" x:Name="RadioCustomType2" Height="22" Tag="UiCustomType/2"
-                                          Grid.Column="3" Check="RadioBoxChange" />
+                                          Grid.Column="2" Check="RadioBoxChange" />
                     </Grid>
                     <local:MyHint Margin="0,15,0,-4" Text="{DynamicResource Setup.Ui.Homepage.HintReferToModSetup}" Theme="Blue" x:Name="HintCustom" />
                     <local:MyHint Margin="0,15,0,6" Text="{DynamicResource Setup.Ui.Homepage.NetWarning}" Theme="Yellow"
@@ -331,36 +328,6 @@
                                 <val:HttpValidator AllowsNullOrEmpty="True" />
                             </local:MyTextBox.ValidateRules>
                         </local:MyTextBox>
-                    </Grid>
-                    <Grid x:Name="PanCustomPreset" Visibility="Collapsed" Margin="0,12,10,5" Height="28">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" SharedSizeGroup="Name" />
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left" Text="{DynamicResource Setup.Ui.Homepage.PresetLabel}" Margin="0,0,25,0" />
-                        <local:MyComboBox x:Name="ComboCustomPreset" Grid.ColumnSpan="2" Tag="UiCustomPreset"
-                                          Grid.Column="1" SelectionChanged="ComboChange">
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.Trivia}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.EchoCave}" Visibility="Collapsed" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.McNews}" />
-                            <!-- <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.SimpleHomepage}" /> -->
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.DailyModpack}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.McSkin}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.OpenBmclapi}" />
-                            <!-- <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.PclMarket}" /> -->
-                            <!-- <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.PclNews}" /> -->
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.PclManual}" />
-                            <!-- <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.OpenMcim}" Visibility="Collapsed" /> -->
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.Magazine}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.GitHub}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.McUpdateSummary}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.NewsToday}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.MinecraftKnowledge}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.ModpackRecommendation}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.Bangumi}" />
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.PclAnnouncement}"/>
-                            <local:MyComboBoxItem Content="{DynamicResource Setup.Ui.Homepage.Preset.McOfficialFeed}"/>
-                        </local:MyComboBox>
                     </Grid>
                 </StackPanel>
             </local:MyCard>
@@ -407,10 +374,7 @@
                         <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="2" Grid.Column="4" Text="{DynamicResource Setup.Ui.FeatureHide.Item.GameManage}"
                                           x:Name="CheckHiddenSetupGameManage" Tag="UiHiddenSetupGameManage"
                                           Change="CheckBoxChange" />
-                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="2" Grid.Column="5" Text="{DynamicResource Setup.Ui.FeatureHide.Item.GameLink}"
-                                          x:Name="CheckHiddenSetupGameLink" Tag="UiHiddenSetupGameLink"
-                                          Change="CheckBoxChange" />
-                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="2" Grid.Column="6"
+                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="2" Grid.Column="5"
                                           Text="{DynamicResource Setup.Ui.FeatureHide.Item.Ui}" x:Name="CheckHiddenSetupUI" Tag="UiHiddenSetupUi"
                                           Change="CheckBoxChange" />
                         <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="3" Grid.Column="2" Text="{DynamicResource Setup.Ui.FeatureHide.Item.Language}"
@@ -432,8 +396,7 @@
                                           Text="{DynamicResource Setup.Ui.FeatureHide.Item.Log}" x:Name="CheckHiddenSetupLog" Tag="UiHiddenSetupLog"
                                           Change="CheckBoxChange" />
                         <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="{DynamicResource Setup.Ui.FeatureHide.SubTools}" />
-                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="4" Grid.Column="2" Text="{DynamicResource Setup.Ui.FeatureHide.Item.Lobby}" x:Name="CheckHiddenToolsGameLink" Tag="UiHiddenToolsGameLink" Change="CheckBoxChange"/>
-                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="4" Grid.Column="3" Text="{DynamicResource Setup.Ui.FeatureHide.Item.Toolbox}" x:Name="CheckHiddenToolsTest" Tag="UiHiddenToolsTest" Change="CheckBoxChange"/>
+                        <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="4" Grid.Column="2" Text="{DynamicResource Setup.Ui.FeatureHide.Item.Toolbox}" x:Name="CheckHiddenToolsTest" Tag="UiHiddenToolsTest" Change="CheckBoxChange"/>
                         <TextBlock Grid.Row="5" VerticalAlignment="Center" HorizontalAlignment="Left" Text="{DynamicResource Setup.Ui.FeatureHide.SubInstance}" />
                         <local:MyCheckBox Height="22" VerticalAlignment="Center" Grid.Row="5" Grid.Column="2" Text="{DynamicResource Setup.Ui.FeatureHide.Item.Edit}"
                                           x:Name="CheckHiddenVersionEdit" Tag="UiHiddenVersionEdit"

@@ -88,93 +88,17 @@ public static class ModLaunch
         if (!string.IsNullOrEmpty(checkResult))
             throw new ArgumentException(checkResult);
 
-#if BETA
-        if (currentLaunchOptions?.SaveBatch is null) // 保存脚本时不提示
-        {
-            ModBase.RunInNewThread(() =>
-            {
-                switch (States.System.LaunchCount)
-                {
-                    case 10:
-                    case 20:
-                    case 40:
-                    case 60:
-                    case 80:
-                    case 100:
-                    case 120:
-                    case 150:
-                    case 200:
-                    case 250:
-                    case 300:
-                    case 350:
-                    case 400:
-                    case 500:
-                    case 600:
-                    case 700:
-                    case 800:
-                    case 900:
-                    case 1000:
-                    case 1200:
-                    case 1400:
-                    case 1600:
-                    case 1800:
-                    case 2000:
-                        if (ModMain.MyMsgBox(
-                                Lang.Text("Minecraft.Launch.Donate.Message", States.System.LaunchCount),
-                                Lang.Text("Minecraft.Launch.Donate.Title", States.System.LaunchCount),
-                                Lang.Text("Minecraft.Launch.Donate.Support"),
-                                Lang.Text("Minecraft.Launch.Donate.Decline")) == 1)
-                        {
-                            ModBase.OpenWebsite("https://afdian.com/a/LTCat");
-                        }
-                        break;
-                }
-            }, "Donate");
-        }
-#endif
-        
+        // === 社区版修改：已移除 BETA 捐赠提示块 ===
+        // 原版代码：#if BETA ... switch(LaunchCount) case 10/20/.../2000 弹捐赠对话框
+        // 社区版认为启动次数是用户隐私数据，不应被用于道德绑架。
+
         #if DEBUG || DEBUGCI
         return;
         #endif
 
-        // 正版购买提示
-        if (!ProfileService.HasMicrosoftProfile)
-        {
-            if (Lang.IsFeaturesUnrestricted)
-            {
-                if (ModMain.MyMsgBox(
-                        Lang.Text("Minecraft.Launch.PurchaseHint.Message"),
-                        Lang.Text("Minecraft.Launch.PurchaseHint.Title"), Lang.Text("Minecraft.Launch.PurchaseHint.Purchase"), Lang.Text("Minecraft.Launch.PurchaseHint.Later")) ==
-                    1)
-                    ModBase.OpenWebsite(
-                        "https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj");
-            }
-            else
-            {                
-                switch (ModMain.MyMsgBox(Lang.Text("Minecraft.Launch.AccountVerification.Message"), 
-                            Lang.Text("Minecraft.Launch.AccountVerification.Title"), 
-                            Lang.Text("Minecraft.Launch.AccountVerification.Purchase"), 
-                            Lang.Text("Minecraft.Launch.AccountVerification.Demo"), 
-                            Lang.Text("Minecraft.Launch.AccountVerification.Back"),
-                            button1Action: () =>
-                                ModBase.OpenWebsite(
-                                    "https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj")))
-                {
-                    case 2:
-                    {
-                        HintService.Hint(Lang.Text("Minecraft.Launch.DemoMode"), HintType.Error);
-                        currentLaunchOptions.ExtraArgs.Add("--demo");
-                        break;
-                    }
-                    case 3:
-                    {
-                        throw new Exception("$$");
-                    }
-                }
-
-            }
-
-        }
+        // === 社区版修改：已移除强制正版购买提示 ===
+        // 原版代码：无微软档案时（非中国区）弹三按钮对话框强制购买/演示/返回，
+        // 选"返回"会 throw 中断启动。社区版解除所有强制，离线/第三方验证均可正常启动。
     }
 
     #endregion

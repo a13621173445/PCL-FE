@@ -60,7 +60,7 @@ public partial class PageSetupFeedback
     public void FeedbackListGet(ModLoader.LoaderTask<bool, List<Feedback>> task)
     {
         var list = Requester.FetchJson(
-            "https://api.github.com/repos/PCL-Community/PCL2-CE/issues?state=all&sort=created&per_page=200",
+            "https://api.github.com/repos/a13621173445/PCL-FE/issues?state=all&sort=created&per_page=200",
             new RequestParam
             {
                 Retries = 3,
@@ -152,12 +152,10 @@ public partial class PageSetupFeedback
 
         foreach (var item in Loader.output)
         {
-            var tag = item.Tags.Find(TagMap.ContainsKey);
-            if (tag is not null)
-            {
-                var (panel, icon) = TagMap[tag];
-                panel(this).Children.Add(CreateFeedbackItem(item, icon));
-            }
+            // 本仓库没有上游社区的那套分类标签，未命中时统一归入“待处理”，避免整页空白
+            var tag = item.Tags.Find(TagMap.ContainsKey) ?? ((long)TagId.Wait).ToString();
+            var (panel, icon) = TagMap[tag];
+            panel(this).Children.Add(CreateFeedbackItem(item, icon));
         }
 
         SetPanelVisibility(PanListProcessing, PanContentProcessing);

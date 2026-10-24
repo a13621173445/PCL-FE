@@ -181,11 +181,10 @@ public static class ProfileUi
 
     public static bool CanCreateOtherProfile()
     {
-#if DEBUG || DEBUGCI
+        // === 社区版修改 ===
+        // 原版：HasMicrosoftProfile || (IsFeaturesUnrestricted && Profiles.Count > 0) || !NetworkAvailable
+        // 已解除所有地区限制，任何人可创建任意类型档案
         return true;
-#else
-        return ProfileService.HasMicrosoftProfile || (Lang.IsFeaturesUnrestricted && ProfileService.Profiles.Count > 0) || NetworkHelper.IsNetworkAvailable() is false;
-#endif
     }
 
     public static void CreateProfile()

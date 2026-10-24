@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -47,7 +47,7 @@ public partial class FormMain
                 changelog = Lang.Text("Main.UpdateLog.Empty");
             if (ModMain.MyMsgBoxMarkdown(changelog,
                     Lang.Text("Main.UpdateLog.Title", ModBase.versionBranchName, ModBase.versionBaseName), Lang.Text("Common.Action.Confirm"), Lang.Text("Main.UpdateLog.FullChangelog")) ==
-                2) ModBase.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases");
+                2) ModBase.OpenWebsite("https://github.com/a13621173445/PCL-FE/releases");
         }, "UpdateLog Output");
     }
 
@@ -241,7 +241,7 @@ public partial class FormMain
                         $"{hint}{"\r\n"}{"\r\n"}{Lang.Text("Main.SpecialVersion.HideHintNotice")}",
                         Lang.Text("Main.SpecialVersion.Title"), Lang.Text("Main.SpecialVersion.IUnderstand"), Lang.Text("Main.SpecialVersion.OpenDownloadPageAndExit"), isWarn: true, button2Action: () =>
                         {
-                            ModBase.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases/latest");
+                            ModBase.OpenWebsite("https://github.com/a13621173445/PCL-FE/releases");
                             EndProgram(false);
                         });
                 }
@@ -265,14 +265,15 @@ public partial class FormMain
                             }
                     }
 
-                // 遥测提示
-                if (Config.System.TelemetryConfig.IsDefault())
-                {
-                    var selection = ModMain.MyMsgBox(
-                                Lang.Text("Main.Telemetry.Message"),
-                                Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
-                    Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
-                }
+                // === 社区版修改：禁用遥测首次确认弹窗 ===
+                // 遥测服务本身已在 TelemetryService 被短路，此弹窗也不再需要
+                // if (Config.System.TelemetryConfig.IsDefault())
+                // {
+                //     var selection = ModMain.MyMsgBox(
+                //                 Lang.Text("Main.Telemetry.Message"),
+                //                 Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
+                //     Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
+                // }
                 // 启动加载器池
                 try
                 {
@@ -337,21 +338,14 @@ public partial class FormMain
         if ((int)Config.Launch.GameWindowMode == 5)
             Config.Launch.GameWindowMode = GameWindowSizeMode.Default;
 
-        // 更新后展示社区版提示
-        UpdateManager.ShowCEAnnounce();
+        // === 社区版修改：禁用社区版公告弹窗 ===
+        // UpdateManager.ShowCEAnnounce();
         // 输出更新日志
         if (lastVersionCode <= 0)
             return;
         if (lowerVersionCode >= ModBase.versionCode)
             return;
         ShowUpdateLog();
-        
-        // 重置自定义主页配置
-        if (lastVersionCode < 521 && Config.Preference.Homepage.SelectedPreset >= 3)
-        {
-            Config.Preference.Homepage.SelectedPreset = 0;
-            ModMain.MyMsgBox(Lang.Text("Main.HomepageReset.Content"), Lang.Text("Main.HomepageReset.Title"));
-        }
     }
 
     private void DowngradeSub(int lastVersionCode)
@@ -516,8 +510,6 @@ public partial class FormMain
                 return;
         }
 
-        // 关闭联机大厅
-        // Await LobbyController.CloseAsync().ConfigureAwait(False)
         // 关闭
         ModBase.RunInUiWait(() =>
         {
@@ -574,8 +566,6 @@ public partial class FormMain
         bool force = true, bool isUpdating = false)
     {
         // On Error Resume Next
-        // 关闭联机大厅
-        // Await LobbyController.CloseAsync().ConfigureAwait(False)
         ModBase.isProgramEnded = true;
         ModAnimation.AniBeginControl();
         if (UpdateManager.isUpdateWaitingRestart && !isUpdating)
@@ -585,7 +575,7 @@ public partial class FormMain
             if (!isLogShown)
             {
                 ModBase.FeedbackInfo();
-                ModBase.Log("请在 https://github.com/PCL-Community/PCL2-CE/issues 提交错误报告，以便于社区解决此问题！（这也有可能是原版 PCL 的问题）");
+                ModBase.Log("请在 https://github.com/a13621173445/PCL-FE/issues 提交错误报告，以便于解决此问题！（这也有可能是原版 PCL 的问题）");
                 isLogShown = true;
                 ModBase.ShellOnly(LogWrapper.CurrentLogger.CurrentLogFiles.Last());
             }
@@ -1442,17 +1432,14 @@ public partial class FormMain
         SetupLaunch = 0,
         SetupUI = 1,
         SetupGameManage = 2,
-        SetupLink = 3,
         SetupAbout = 4,
         SetupLog = 5,
         SetupFeedback = 6,
-        SetupGameLink = 7,
         SetupUpdate = 8,
         SetupJava = 9,
         SetupLauncherMisc = 10,
         SetupLauncherLanguage = 11,
 
-        ToolsGameLink = 1,
         ToolsTest = 3,
 
         VersionOverall = 0,

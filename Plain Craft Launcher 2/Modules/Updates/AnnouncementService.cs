@@ -7,6 +7,9 @@ public static class AnnouncementService
 {
     public static void Load()
     {
+        // === 社区版修改：禁用远程公告 ===
+        // 原逻辑：从 remoteServer 拉取远程公告并弹窗，属于服务器控制入口。
+        return;
         if (States.System.AnnounceSolution > 1)
             return;
 

@@ -1,0 +1,170 @@
+name: Sync upstream & Build
+
+# 自动跟随主仓库 PCL-Community/PCL-CE 的 dev 分支：
+#   1. 拉取上游最新代码
+#   2. 重新应用 custom/pcl-ce-custom.patch（社区化修改）
+#   3. 强推覆盖本仓库的 dev 分支
+#   4. 构建单文件 exe 并刷新 Release: community-latest
+#
+# 注意：构建必须放在同一个 workflow 里。GitHub 规定用 GITHUB_TOKEN 推送的提交
+# 不会触发其它 workflow，拆成两个文件时第二段永远不会跑。
+
+on:
+  schedule:
+    # 每 6 小时检查一次（UTC）
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.sync.outputs.updated }}
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Sync and re-apply patch
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          UPSTREAM="https://github.com/PCL-Community/PCL-CE.git"
+
+          git remote add upstream "$UPSTREAM" 2>/dev/null || true
+          git fetch --no-tags upstream dev
+
+          BEFORE_TREE="$(git rev-parse HEAD^{tree})"
+          echo "before tree: $BEFORE_TREE"
+
+          # 工作流文件和补丁不属于上游，reset 会删掉它们，先备份
+          KEEP="$(mktemp -d)"
+          mkdir -p "$KEEP/.github/workflows" "$KEEP/custom"
+          cp .github/workflows/sync-upstream.yml "$KEEP/.github/workflows/"
+          cp custom/*.patch "$KEEP/custom/"
+
+          # 完全回到上游状态
+          git reset --hard upstream/dev
+
+          # 恢复备份
+          cp -r "$KEEP"/. .
+
+          # 逐个重放补丁
+          for p in custom/*.patch; do
+            echo "applying $p"
+            git apply --check "$p"
+            git apply "$p"
+          done
+
+          git add -A
+          AFTER_TREE="$(git write-tree)"
+          echo "after tree:  $AFTER_TREE"
+
+          if [ "$BEFORE_TREE" = "$AFTER_TREE" ]; then
+            echo "Already up to date, nothing to push."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "community-bot"
+          git config user.email "community-bot@users.noreply.github.com"
+          git commit -m "chore: sync upstream dev and re-apply community patch"
+
+          # 已确认接受强推覆盖，保证 fork 的 dev 与上游 + 补丁完全一致
+          git push --force origin dev
+
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: sync
+    if: needs.sync.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # 每次构建注入递增版本号，否则启动器内置更新永远判定「已是最新」。
+      # 形如 2.15.1-fe.123：base 跟随上游，suffix 用 run_number 保证单调递增。
+      - name: Bump version
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = "Plain Craft Launcher 2/metadata.json"
+          with open(path, encoding="utf-8") as f:
+              data = json.load(f)
+          data["name"] = "Plain Craft Launcher Free Edition"
+          data["version"]["suffix"] = "fe." + os.environ["GITHUB_RUN_NUMBER"]
+          data["version"]["code"] = int(os.environ["GITHUB_RUN_NUMBER"])
+          with open(path, "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+          print(data["version"])
+          PY
+          BASE=$(python3 -c "import json;print(json.load(open('Plain Craft Launcher 2/metadata.json',encoding='utf-8'))['version']['base'])")
+          echo "CE_VERSION=${BASE}-fe.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Publish
+        run: |
+          dotnet publish "Plain Craft Launcher 2/Plain Craft Launcher 2.csproj" \
+            -c Release \
+            -p:Platform=x64 \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -o ./artifact
+
+      - name: Rename
+        run: |
+          cp "./artifact/Plain Craft Launcher 2.exe" ./PCL2_CE_Community.exe
+          ls -lh ./PCL2_CE_Community.exe
+
+      # 启动器内置的更新源自此文件读取版本号、SHA256 与下载地址
+      - name: Generate update.json
+        run: |
+          SHA256=$(sha256sum ./PCL2_CE_Community.exe | cut -d' ' -f1)
+          cat > update.json <<EOF
+          {
+            "version": "${CE_VERSION}",
+            "code": ${GITHUB_RUN_NUMBER},
+            "sha256": "${SHA256}",
+            "changelog": "自动构建，已同步主仓库最新代码。\\n\\n- 版本：${CE_VERSION}\\n- 提交：${GITHUB_SHA}",
+            "url": "https://github.com/a13621173445/PCL-FE/releases/download/community-latest/PCL2_CE_Community.exe"
+          }
+          EOF
+          cat update.json
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: community-latest
+          name: PCL-FE Build ${{ env.CE_VERSION }}
+          prerelease: true
+          files: |
+            ./PCL2_CE_Community.exe
+            ./update.json
+          body: |
+            由 GitHub Actions 自动构建。
+
+            - 版本：${{ env.CE_VERSION }}
+            - 基于主仓库 PCL-Community/PCL-CE 的 dev 分支
+            - 已应用 `custom/pcl-ce-custom.patch`
+            - 提交：${{ github.sha }}

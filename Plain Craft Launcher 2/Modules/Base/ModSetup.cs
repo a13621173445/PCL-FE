@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -401,7 +401,6 @@ public class ModSetup
         {
             case 0: // 无
             {
-                ModMain.frmSetupUI.PanCustomPreset.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.PanCustomLocal.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.PanCustomNet.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.HintCustom.Visibility = Visibility.Collapsed;
@@ -410,7 +409,6 @@ public class ModSetup
             }
             case 1: // 本地
             {
-                ModMain.frmSetupUI.PanCustomPreset.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.PanCustomLocal.Visibility = Visibility.Visible;
                 ModMain.frmSetupUI.PanCustomNet.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.HintCustom.Visibility = Visibility.Visible;
@@ -423,7 +421,6 @@ public class ModSetup
             }
             case 2: // 联网
             {
-                ModMain.frmSetupUI.PanCustomPreset.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.PanCustomLocal.Visibility = Visibility.Collapsed;
                 ModMain.frmSetupUI.PanCustomNet.Visibility = Visibility.Visible;
                 ModMain.frmSetupUI.HintCustom.Visibility = Visibility.Visible;
@@ -434,15 +431,6 @@ public class ModSetup
                 CustomEventService.SetEventType(ModMain.frmSetupUI.HintCustom, EventType.OpenUrl);
                 CustomEventService.SetEventData(ModMain.frmSetupUI.HintCustom,
                     "https://github.com/PCL-Community/PCL-CE/discussions");
-                break;
-            }
-            case 3: // 预设
-            {
-                ModMain.frmSetupUI.PanCustomPreset.Visibility = Visibility.Visible;
-                ModMain.frmSetupUI.PanCustomLocal.Visibility = Visibility.Collapsed;
-                ModMain.frmSetupUI.PanCustomNet.Visibility = Visibility.Collapsed;
-                ModMain.frmSetupUI.HintCustom.Visibility = Visibility.Collapsed;
-                ModMain.frmSetupUI.HintCustomWarn.Visibility = Visibility.Collapsed;
                 break;
             }
         }

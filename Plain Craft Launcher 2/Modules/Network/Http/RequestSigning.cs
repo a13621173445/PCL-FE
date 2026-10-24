@@ -28,11 +28,12 @@ public static class RequestSigning
         {
             client.Headers.Add("x-api-key", Secrets.CurseForgeAPIKey);
         }
+        // 不携带版本号，避免被用于统计各版本的用户数量
         var userAgent = !string.IsNullOrEmpty(customUserAgent)
             ? customUserAgent
             : useBrowserUserAgent
-                ? $"PCL2/{ModBase.upstreamVersion}.{ModBase.versionBranchCode} PCLCE/{ModBase.versionStandardCode} Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
-                : $"PCL2/{ModBase.upstreamVersion}.{ModBase.versionBranchCode} PCLCE/{ModBase.versionStandardCode}";
+                ? "PCL2 PCL-FE Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+                : "PCL2 PCL-FE";
         client.Headers.Add("User-Agent", userAgent);
     }
 }
