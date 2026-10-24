@@ -1,13 +1,13 @@
 name: Sync upstream & Build
 
 # 自动跟随主仓库 PCL-Community/PCL-CE 的 dev 分支：
-#   1. 拉取上游最新代码
-#   2. 重新应用 custom/pcl-ce-custom.patch（社区化修改）
-#   3. 强推覆盖本仓库的 dev 分支
-#   4. 构建单文件 exe 并刷新 Release: community-latest
+#   1. git merge 上游 dev（冲突一律保留本仓库的改动）
+#   2. 构建单文件 exe
+#   3. 构建成功后才把合并结果推回本仓库 dev（坏代码不进分支）
+#   4. 刷新 Release: community-latest
 #
-# 注意：构建必须放在同一个 workflow 里。GitHub 规定用 GITHUB_TOKEN 推送的提交
-# 不会触发其它 workflow，拆成两个文件时第二段永远不会跑。
+# 本仓库的全部定制（去更新检查、去正版门槛、去捐赠提示、去用户追踪、
+# 去预设主页、去联机功能）都直接体现在源码提交中，不再依赖 patch 文件。
 
 on:
   schedule:
@@ -17,16 +17,15 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: sync-upstream
   cancel-in-progress: false
 
 jobs:
-  sync:
+  sync-and-build:
     runs-on: ubuntu-latest
-    outputs:
-      updated: ${{ steps.sync.outputs.updated }}
     steps:
       - name: Checkout dev
         uses: actions/checkout@v4
@@ -34,69 +33,50 @@ jobs:
           ref: dev
           fetch-depth: 0
 
-      - name: Sync and re-apply patch
-        id: sync
+      - name: Merge upstream dev
+        id: merge
         shell: bash
         run: |
           set -euo pipefail
 
           UPSTREAM="https://github.com/PCL-Community/PCL-CE.git"
-
           git remote add upstream "$UPSTREAM" 2>/dev/null || true
           git fetch --no-tags upstream dev
 
-          BEFORE_TREE="$(git rev-parse HEAD^{tree})"
-          echo "before tree: $BEFORE_TREE"
-
-          # 工作流文件和补丁不属于上游，reset 会删掉它们，先备份
-          KEEP="$(mktemp -d)"
-          mkdir -p "$KEEP/.github/workflows" "$KEEP/custom"
-          cp .github/workflows/sync-upstream.yml "$KEEP/.github/workflows/"
-          cp custom/*.patch "$KEEP/custom/"
-
-          # 完全回到上游状态
-          git reset --hard upstream/dev
-
-          # 恢复备份
-          cp -r "$KEEP"/. .
-
-          # 逐个重放补丁
-          for p in custom/*.patch; do
-            echo "applying $p"
-            git apply --check "$p"
-            git apply "$p"
-          done
-
-          git add -A
-          AFTER_TREE="$(git write-tree)"
-          echo "after tree:  $AFTER_TREE"
-
-          if [ "$BEFORE_TREE" = "$AFTER_TREE" ]; then
-            echo "Already up to date, nothing to push."
+          if git merge-base --is-ancestor upstream/dev HEAD; then
+            echo "本仓库已包含上游 dev，无需合并。"
             echo "updated=false" >> "$GITHUB_OUTPUT"
+            echo "BUILD_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
             exit 0
           fi
 
           git config user.name "community-bot"
           git config user.email "community-bot@users.noreply.github.com"
-          git commit -m "chore: sync upstream dev and re-apply community patch"
 
-          # 已确认接受强推覆盖，保证 fork 的 dev 与上游 + 补丁完全一致
-          git push --force origin dev
+          # 全部冲突保留本仓库改动：这里的每一处修改都是有意为之
+          git merge --no-edit -X ours upstream/dev || true
+
+          # -X ours 不处理「一方删除文件」的冲突，统一按删除处理：
+          # 我们删掉的文件被上游修改 → 保持删除；上游删掉的文件我们改过 → 接受删除
+          while IFS= read -r -d '' f; do
+            if git cat-file -e "HEAD:$f" 2>/dev/null && git cat-file -e "upstream/dev:$f" 2>/dev/null; then
+              git checkout --ours -- "$f"
+              git add "$f"
+            else
+              git rm -q -f --ignore-unmatch "$f"
+            fi
+          done < <(git diff --name-only --diff-filter=U -z)
+
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            git commit --no-edit
+          fi
 
           echo "updated=true" >> "$GITHUB_OUTPUT"
-
-  build:
-    needs: sync
-    if: needs.sync.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: dev
+          echo "BUILD_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          git log --oneline -5
 
       - name: Setup .NET SDK
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -104,6 +84,8 @@ jobs:
       # 每次构建注入递增版本号，否则启动器内置更新永远判定「已是最新」。
       # 形如 2.15.1-fe.123：base 跟随上游，suffix 用 run_number 保证单调递增。
       - name: Bump version
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
         run: |
           python3 - <<'PY'
           import json, os
@@ -121,6 +103,7 @@ jobs:
           echo "CE_VERSION=${BASE}-fe.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Publish
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           dotnet publish "Plain Craft Launcher 2/Plain Craft Launcher 2.csproj" \
             -c Release \
@@ -133,12 +116,14 @@ jobs:
             -o ./artifact
 
       - name: Rename
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cp "./artifact/Plain Craft Launcher 2.exe" ./PCL2_CE_Community.exe
           ls -lh ./PCL2_CE_Community.exe
 
       # 启动器内置的更新源自此文件读取版本号、SHA256 与下载地址
       - name: Generate update.json
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           SHA256=$(sha256sum ./PCL2_CE_Community.exe | cut -d' ' -f1)
           cat > update.json <<EOF
@@ -146,13 +131,19 @@ jobs:
             "version": "${CE_VERSION}",
             "code": ${GITHUB_RUN_NUMBER},
             "sha256": "${SHA256}",
-            "changelog": "自动构建，已同步主仓库最新代码。\\n\\n- 版本：${CE_VERSION}\\n- 提交：${GITHUB_SHA}",
+            "changelog": "自动构建，已同步主仓库最新代码。\\n\\n- 版本：${CE_VERSION}\\n- 提交：${BUILD_SHA}",
             "url": "https://github.com/a13621173445/PCL-FE/releases/download/community-latest/PCL2_CE_Community.exe"
           }
           EOF
           cat update.json
 
+      # 构建通过才推送，避免上游改动导致编译失败时污染 dev 分支
+      - name: Push merged dev
+        if: steps.merge.outputs.updated == 'true'
+        run: git push origin dev
+
       - name: Publish Release
+        if: steps.merge.outputs.updated == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: community-latest
@@ -166,5 +157,46 @@ jobs:
 
             - 版本：${{ env.CE_VERSION }}
             - 基于主仓库 PCL-Community/PCL-CE 的 dev 分支
-            - 已应用 `custom/pcl-ce-custom.patch`
-            - 提交：${{ github.sha }}
+            - 已合入本仓库的全部定制改动
+            - 提交：${{ env.BUILD_SHA }}
+
+      # 合并或构建失败时开 Issue 提醒，避免自动同步静默中断
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              '自动同步或构建失败，dev 分支保持在上一次可用状态。',
+              '',
+              `- 运行记录：${runUrl}`,
+              `- 触发提交：${context.sha}`,
+              '',
+              '排查建议：本地执行 `git fetch upstream dev && git merge upstream/dev`，',
+              '处理编译错误后推送，下次定时任务会自动继续。'
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'sync-failed'
+            });
+
+            if (issues.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '自动同步失败：需要人工介入',
+                body,
+                labels: ['sync-failed']
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body
+              });
+            }
