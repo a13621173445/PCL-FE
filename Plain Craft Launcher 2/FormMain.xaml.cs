@@ -346,13 +346,6 @@ public partial class FormMain
         if (lowerVersionCode >= ModBase.versionCode)
             return;
         ShowUpdateLog();
-        
-        // 重置自定义主页配置
-        if (lastVersionCode < 521 && Config.Preference.Homepage.SelectedPreset >= 3)
-        {
-            Config.Preference.Homepage.SelectedPreset = 0;
-            ModMain.MyMsgBox(Lang.Text("Main.HomepageReset.Content"), Lang.Text("Main.HomepageReset.Title"));
-        }
     }
 
     private void DowngradeSub(int lastVersionCode)
@@ -517,8 +510,6 @@ public partial class FormMain
                 return;
         }
 
-        // 关闭联机大厅
-        // Await LobbyController.CloseAsync().ConfigureAwait(False)
         // 关闭
         ModBase.RunInUiWait(() =>
         {
@@ -575,8 +566,6 @@ public partial class FormMain
         bool force = true, bool isUpdating = false)
     {
         // On Error Resume Next
-        // 关闭联机大厅
-        // Await LobbyController.CloseAsync().ConfigureAwait(False)
         ModBase.isProgramEnded = true;
         ModAnimation.AniBeginControl();
         if (UpdateManager.isUpdateWaitingRestart && !isUpdating)
@@ -1443,17 +1432,14 @@ public partial class FormMain
         SetupLaunch = 0,
         SetupUI = 1,
         SetupGameManage = 2,
-        SetupLink = 3,
         SetupAbout = 4,
         SetupLog = 5,
         SetupFeedback = 6,
-        SetupGameLink = 7,
         SetupUpdate = 8,
         SetupJava = 9,
         SetupLauncherMisc = 10,
         SetupLauncherLanguage = 11,
 
-        ToolsGameLink = 1,
         ToolsTest = 3,
 
         VersionOverall = 0,
