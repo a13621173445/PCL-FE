@@ -95,7 +95,7 @@ jobs:
             --title "自动同步失败：补丁与上游冲突 $(date -u +%Y-%m-%d)" \
             --body "上游 PCL-Community/PCL-CE 的 dev 分支改动与 custom/pcl-ce-custom.patch 冲突，自动同步已停止。
 
-请查看失败的运行日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            请查看失败的运行日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-处理方式：更新 custom/pcl-ce-custom.patch 使其适配上游新代码。" \
+            处理方式：更新 custom/pcl-ce-custom.patch 使其适配上游新代码。" \
             || true
