@@ -1,0 +1,66 @@
+name: Build community
+
+# 每次 dev 分支更新（含自动同步）后，构建 Windows 单文件 exe 并发布。
+# 产物固定在 Release 的 community-latest 标签下，随上游更新而刷新。
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'PCL.Core/**'
+      - 'Plain Craft Launcher 2/**'
+      - 'custom/**'
+      - '.github/workflows/build-community.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-community
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        run: |
+          dotnet publish "Plain Craft Launcher 2/Plain Craft Launcher 2.csproj" \
+            -c Release \
+            -p:Platform=x64 \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -o ./artifact
+
+      - name: Rename
+        run: |
+          cp "./artifact/Plain Craft Launcher 2.exe" ./PCL2_CE_Community.exe
+          ls -lh ./PCL2_CE_Community.exe
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: community-latest
+          name: Community Build (自动构建)
+          prerelease: true
+          files: ./PCL2_CE_Community.exe
+          body: |
+            由 GitHub Actions 自动构建。
+
+            - 基于主仓库 PCL-Community/PCL-CE 的 dev 分支
+            - 已应用 `custom/pcl-ce-custom.patch`
+            - 提交：${{ github.sha }}
+            - 构建时间：${{ github.run_id }}

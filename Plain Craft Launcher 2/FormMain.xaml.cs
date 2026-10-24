@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -265,14 +265,15 @@ public partial class FormMain
                             }
                     }
 
-                // 遥测提示
-                if (Config.System.TelemetryConfig.IsDefault())
-                {
-                    var selection = ModMain.MyMsgBox(
-                                Lang.Text("Main.Telemetry.Message"),
-                                Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
-                    Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
-                }
+                // === 社区版修改：禁用遥测首次确认弹窗 ===
+                // 遥测服务本身已在 TelemetryService 被短路，此弹窗也不再需要
+                // if (Config.System.TelemetryConfig.IsDefault())
+                // {
+                //     var selection = ModMain.MyMsgBox(
+                //                 Lang.Text("Main.Telemetry.Message"),
+                //                 Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
+                //     Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
+                // }
                 // 启动加载器池
                 try
                 {
@@ -337,8 +338,8 @@ public partial class FormMain
         if ((int)Config.Launch.GameWindowMode == 5)
             Config.Launch.GameWindowMode = GameWindowSizeMode.Default;
 
-        // 更新后展示社区版提示
-        UpdateManager.ShowCEAnnounce();
+        // === 社区版修改：禁用社区版公告弹窗 ===
+        // UpdateManager.ShowCEAnnounce();
         // 输出更新日志
         if (lastVersionCode <= 0)
             return;

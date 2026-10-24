@@ -153,6 +153,11 @@ public sealed partial class TelemetryService
     [LifecycleStart]
     private static async Task _StartAsync()
     {
+        // === 社区版修改：禁用所有遥测 ===
+        // Sentry 崩溃上报 + STUN NAT 测试 + 设备环境调查（包括操作系统、架构、
+        // 内存、IPv6、NAT 类型、甚至检测用户是否装过 HMCL/BakaXL/PCL 正版）。
+        // 这些是纯追踪行为，用户未授权，全部跳过。
+        return;
         if (!Config.System.Telemetry) return;
         _InitSentry();
         

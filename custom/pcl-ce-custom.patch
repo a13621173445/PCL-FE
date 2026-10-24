@@ -1,0 +1,244 @@
+diff --git a/PCL.Core/App/Essentials/TelemetryService.cs b/PCL.Core/App/Essentials/TelemetryService.cs
+index 723574a..65c3e74 100644
+--- a/PCL.Core/App/Essentials/TelemetryService.cs
++++ b/PCL.Core/App/Essentials/TelemetryService.cs
+@@ -153,6 +153,11 @@ public sealed partial class TelemetryService
+     [LifecycleStart]
+     private static async Task _StartAsync()
+     {
++        // === 社区版修改：禁用所有遥测 ===
++        // Sentry 崩溃上报 + STUN NAT 测试 + 设备环境调查（包括操作系统、架构、
++        // 内存、IPv6、NAT 类型、甚至检测用户是否装过 HMCL/BakaXL/PCL 正版）。
++        // 这些是纯追踪行为，用户未授权，全部跳过。
++        return;
+         if (!Config.System.Telemetry) return;
+         _InitSentry();
+         
+diff --git a/Plain Craft Launcher 2/FormMain.xaml.cs b/Plain Craft Launcher 2/FormMain.xaml.cs
+index 667120e..dabefc5 100644
+--- a/Plain Craft Launcher 2/FormMain.xaml.cs	
++++ b/Plain Craft Launcher 2/FormMain.xaml.cs	
+@@ -1,4 +1,4 @@
+-﻿using System.ComponentModel;
++using System.ComponentModel;
+ using System.IO;
+ using System.Net;
+ using System.Runtime.InteropServices;
+@@ -265,14 +265,15 @@ public partial class FormMain
+                             }
+                     }
+ 
+-                // 遥测提示
+-                if (Config.System.TelemetryConfig.IsDefault())
+-                {
+-                    var selection = ModMain.MyMsgBox(
+-                                Lang.Text("Main.Telemetry.Message"),
+-                                Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
+-                    Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
+-                }
++                // === 社区版修改：禁用遥测首次确认弹窗 ===
++                // 遥测服务本身已在 TelemetryService 被短路，此弹窗也不再需要
++                // if (Config.System.TelemetryConfig.IsDefault())
++                // {
++                //     var selection = ModMain.MyMsgBox(
++                //                 Lang.Text("Main.Telemetry.Message"),
++                //                 Lang.Text("Main.Telemetry.Title"), Lang.Text("Common.Action.Agree"), Lang.Text("Common.Action.Decline"));
++                //     Config.System.TelemetryConfig.SetValue(selection == 1, forceNewValue: true);
++                // }
+                 // 启动加载器池
+                 try
+                 {
+@@ -337,8 +338,8 @@ public partial class FormMain
+         if ((int)Config.Launch.GameWindowMode == 5)
+             Config.Launch.GameWindowMode = GameWindowSizeMode.Default;
+ 
+-        // 更新后展示社区版提示
+-        UpdateManager.ShowCEAnnounce();
++        // === 社区版修改：禁用社区版公告弹窗 ===
++        // UpdateManager.ShowCEAnnounce();
+         // 输出更新日志
+         if (lastVersionCode <= 0)
+             return;
+diff --git a/Plain Craft Launcher 2/Modules/Minecraft/ModLaunch.cs b/Plain Craft Launcher 2/Modules/Minecraft/ModLaunch.cs
+index edf56b4..111dbd0 100644
+--- a/Plain Craft Launcher 2/Modules/Minecraft/ModLaunch.cs	
++++ b/Plain Craft Launcher 2/Modules/Minecraft/ModLaunch.cs	
+@@ -88,93 +88,17 @@ public static class ModLaunch
+         if (!string.IsNullOrEmpty(checkResult))
+             throw new ArgumentException(checkResult);
+ 
+-#if BETA
+-        if (currentLaunchOptions?.SaveBatch is null) // 保存脚本时不提示
+-        {
+-            ModBase.RunInNewThread(() =>
+-            {
+-                switch (States.System.LaunchCount)
+-                {
+-                    case 10:
+-                    case 20:
+-                    case 40:
+-                    case 60:
+-                    case 80:
+-                    case 100:
+-                    case 120:
+-                    case 150:
+-                    case 200:
+-                    case 250:
+-                    case 300:
+-                    case 350:
+-                    case 400:
+-                    case 500:
+-                    case 600:
+-                    case 700:
+-                    case 800:
+-                    case 900:
+-                    case 1000:
+-                    case 1200:
+-                    case 1400:
+-                    case 1600:
+-                    case 1800:
+-                    case 2000:
+-                        if (ModMain.MyMsgBox(
+-                                Lang.Text("Minecraft.Launch.Donate.Message", States.System.LaunchCount),
+-                                Lang.Text("Minecraft.Launch.Donate.Title", States.System.LaunchCount),
+-                                Lang.Text("Minecraft.Launch.Donate.Support"),
+-                                Lang.Text("Minecraft.Launch.Donate.Decline")) == 1)
+-                        {
+-                            ModBase.OpenWebsite("https://afdian.com/a/LTCat");
+-                        }
+-                        break;
+-                }
+-            }, "Donate");
+-        }
+-#endif
+-        
++        // === 社区版修改：已移除 BETA 捐赠提示块 ===
++        // 原版代码：#if BETA ... switch(LaunchCount) case 10/20/.../2000 弹捐赠对话框
++        // 社区版认为启动次数是用户隐私数据，不应被用于道德绑架。
++
+         #if DEBUG || DEBUGCI
+         return;
+         #endif
+ 
+-        // 正版购买提示
+-        if (!ProfileService.HasMicrosoftProfile)
+-        {
+-            if (Lang.IsFeaturesUnrestricted)
+-            {
+-                if (ModMain.MyMsgBox(
+-                        Lang.Text("Minecraft.Launch.PurchaseHint.Message"),
+-                        Lang.Text("Minecraft.Launch.PurchaseHint.Title"), Lang.Text("Minecraft.Launch.PurchaseHint.Purchase"), Lang.Text("Minecraft.Launch.PurchaseHint.Later")) ==
+-                    1)
+-                    ModBase.OpenWebsite(
+-                        "https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj");
+-            }
+-            else
+-            {                
+-                switch (ModMain.MyMsgBox(Lang.Text("Minecraft.Launch.AccountVerification.Message"), 
+-                            Lang.Text("Minecraft.Launch.AccountVerification.Title"), 
+-                            Lang.Text("Minecraft.Launch.AccountVerification.Purchase"), 
+-                            Lang.Text("Minecraft.Launch.AccountVerification.Demo"), 
+-                            Lang.Text("Minecraft.Launch.AccountVerification.Back"),
+-                            button1Action: () =>
+-                                ModBase.OpenWebsite(
+-                                    "https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj")))
+-                {
+-                    case 2:
+-                    {
+-                        HintService.Hint(Lang.Text("Minecraft.Launch.DemoMode"), HintType.Error);
+-                        currentLaunchOptions.ExtraArgs.Add("--demo");
+-                        break;
+-                    }
+-                    case 3:
+-                    {
+-                        throw new Exception("$$");
+-                    }
+-                }
+-
+-            }
+-
+-        }
++        // === 社区版修改：已移除强制正版购买提示 ===
++        // 原版代码：无微软档案时（非中国区）弹三按钮对话框强制购买/演示/返回，
++        // 选"返回"会 throw 中断启动。社区版解除所有强制，离线/第三方验证均可正常启动。
+     }
+ 
+     #endregion
+diff --git a/Plain Craft Launcher 2/Modules/Minecraft/ProfileUi.cs b/Plain Craft Launcher 2/Modules/Minecraft/ProfileUi.cs
+index 8a4b584..7b51427 100644
+--- a/Plain Craft Launcher 2/Modules/Minecraft/ProfileUi.cs	
++++ b/Plain Craft Launcher 2/Modules/Minecraft/ProfileUi.cs	
+@@ -181,11 +181,10 @@ public static class ProfileUi
+ 
+     public static bool CanCreateOtherProfile()
+     {
+-#if DEBUG || DEBUGCI
++        // === 社区版修改 ===
++        // 原版：HasMicrosoftProfile || (IsFeaturesUnrestricted && Profiles.Count > 0) || !NetworkAvailable
++        // 已解除所有地区限制，任何人可创建任意类型档案
+         return true;
+-#else
+-        return ProfileService.HasMicrosoftProfile || (Lang.IsFeaturesUnrestricted && ProfileService.Profiles.Count > 0) || NetworkHelper.IsNetworkAvailable() is false;
+-#endif
+     }
+ 
+     public static void CreateProfile()
+diff --git a/Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs b/Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs
+index 252e4bb..962dd2c 100644
+--- a/Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs	
++++ b/Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs	
+@@ -1,33 +1,13 @@
+-using PCL.Core.App.Region;
+-using PCL.Core.App.Localization;
+-using PCL.Core.UI;
++// === 社区版修改：所有地区限制永久放开 ===
++// 原版基于 RegionPolicy 判断中国大陆/未知地区，
++// 对其限制功能（下载、安装整合包、修复等）。
++// 社区版认为：这些功能与地区无关，全部放行。
+ 
+ namespace PCL;
+ 
+ internal static class RestrictedFeaturePolicy
+ {
+-    internal static RegionAssessment Assess() => RegionPolicy.Evaluate(RegionPolicy.ReadWindowsSignals());
+-
+-    internal static bool IsRestricted => Assess().IsRestricted;
+-
+-    internal static bool Check(string feature, bool showHint = true)
+-    {
+-        var assessment = Assess();
+-        if (!assessment.IsRestricted) return true;
+-
+-        ModBase.Log($"[RegionPolicy] 已阻止功能 {feature}，判定原因：{assessment.Reason}");
+-        if (showHint)
+-        {
+-            HintService.Hint(Lang.Text(assessment.Classification == RegionClassification.Unknown
+-                ? "Region.Feature.Unknown"
+-                : "Region.Feature.Restricted"), HintType.Error);
+-        }
+-        return false;
+-    }
+-
+-    internal static void ThrowIfRestricted(string feature)
+-    {
+-        if (Check(feature, false)) return;
+-        throw new ModBase.CancelledException();
+-    }
++    internal static bool IsRestricted => false;
++    internal static bool Check(string feature, bool showHint = true) => true;
++    internal static void ThrowIfRestricted(string feature) { }
+ }
+diff --git a/Plain Craft Launcher 2/Modules/Updates/AnnouncementService.cs b/Plain Craft Launcher 2/Modules/Updates/AnnouncementService.cs
+index b48e9d8..ac84c6f 100644
+--- a/Plain Craft Launcher 2/Modules/Updates/AnnouncementService.cs	
++++ b/Plain Craft Launcher 2/Modules/Updates/AnnouncementService.cs	
+@@ -7,6 +7,9 @@ public static class AnnouncementService
+ {
+     public static void Load()
+     {
++        // === 社区版修改：禁用远程公告 ===
++        // 原逻辑：从 remoteServer 拉取远程公告并弹窗，属于服务器控制入口。
++        return;
+         if (States.System.AnnounceSolution > 1)
+             return;
+ 

@@ -1,0 +1,101 @@
+name: Sync upstream
+
+# 自动跟随主仓库 PCL-Community/PCL-CE 的 dev 分支：
+#   1. 拉取上游最新代码
+#   2. 重新应用 custom/pcl-ce-custom.patch（社区化修改）
+#   3. 强推覆盖本仓库的 dev 分支
+# 上游没有更新时不会产生任何提交。
+
+on:
+  schedule:
+    # 每 6 小时检查一次（UTC）
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Sync and re-apply patch
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          UPSTREAM="https://github.com/PCL-Community/PCL-CE.git"
+
+          git remote add upstream "$UPSTREAM" 2>/dev/null || true
+          git fetch --no-tags upstream dev
+
+          BEFORE_TREE="$(git rev-parse HEAD^{tree})"
+          echo "before tree: $BEFORE_TREE"
+
+          # 工作流文件和补丁不属于上游，reset 会删掉它们，先备份
+          KEEP="$(mktemp -d)"
+          mkdir -p "$KEEP/.github/workflows" "$KEEP/custom"
+          cp .github/workflows/sync-upstream.yml "$KEEP/.github/workflows/"
+          cp .github/workflows/build-community.yml "$KEEP/.github/workflows/"
+          cp custom/*.patch "$KEEP/custom/"
+
+          # 完全回到上游状态
+          git reset --hard upstream/dev
+
+          # 恢复备份
+          cp -r "$KEEP"/. .
+
+          # 逐个重放补丁
+          for p in custom/*.patch; do
+            echo "applying $p"
+            git apply --check "$p"
+            git apply "$p"
+          done
+
+          git add -A
+          AFTER_TREE="$(git write-tree)"
+          echo "after tree:  $AFTER_TREE"
+
+          if [ "$BEFORE_TREE" = "$AFTER_TREE" ]; then
+            echo "Already up to date, nothing to push."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "community-bot"
+          git config user.email "community-bot@users.noreply.github.com"
+          git commit -m "chore: sync upstream dev and re-apply community patch"
+
+          # 已确认接受强推覆盖，保证 fork 的 dev 与上游 + 补丁完全一致
+          git push --force origin dev
+
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$(git rev-parse upstream/dev)" >> "$GITHUB_OUTPUT"
+
+      - name: Report failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "自动同步失败：补丁与上游冲突 $(date -u +%Y-%m-%d)" \
+            --body "上游 PCL-Community/PCL-CE 的 dev 分支改动与 custom/pcl-ce-custom.patch 冲突，自动同步已停止。
+
+请查看失败的运行日志：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+处理方式：更新 custom/pcl-ce-custom.patch 使其适配上游新代码。" \
+            || true
