@@ -102,7 +102,7 @@ jobs:
           dotnet-version: 10.0.x
 
       # 每次构建注入递增版本号，否则启动器内置更新永远判定「已是最新」。
-      # 形如 2.15.1-ce.123：base 跟随上游，suffix 用 run_number 保证单调递增。
+      # 形如 2.15.1-fe.123：base 跟随上游，suffix 用 run_number 保证单调递增。
       - name: Bump version
         run: |
           python3 - <<'PY'
@@ -110,14 +110,15 @@ jobs:
           path = "Plain Craft Launcher 2/metadata.json"
           with open(path, encoding="utf-8") as f:
               data = json.load(f)
-          data["version"]["suffix"] = "ce." + os.environ["GITHUB_RUN_NUMBER"]
+          data["name"] = "Plain Craft Launcher Free Edition"
+          data["version"]["suffix"] = "fe." + os.environ["GITHUB_RUN_NUMBER"]
           data["version"]["code"] = int(os.environ["GITHUB_RUN_NUMBER"])
           with open(path, "w", encoding="utf-8") as f:
               json.dump(data, f, ensure_ascii=False, indent=2)
           print(data["version"])
           PY
           BASE=$(python3 -c "import json;print(json.load(open('Plain Craft Launcher 2/metadata.json',encoding='utf-8'))['version']['base'])")
-          echo "CE_VERSION=${BASE}-ce.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "CE_VERSION=${BASE}-fe.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Publish
         run: |
@@ -146,7 +147,7 @@ jobs:
             "code": ${GITHUB_RUN_NUMBER},
             "sha256": "${SHA256}",
             "changelog": "自动构建，已同步主仓库最新代码。\\n\\n- 版本：${CE_VERSION}\\n- 提交：${GITHUB_SHA}",
-            "url": "https://github.com/a13621173445/PCL-CE/releases/download/community-latest/PCL2_CE_Community.exe"
+            "url": "https://github.com/a13621173445/PCL-FE/releases/download/community-latest/PCL2_CE_Community.exe"
           }
           EOF
           cat update.json
@@ -155,7 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: community-latest
-          name: Community Build ${{ env.CE_VERSION }}
+          name: PCL-FE Build ${{ env.CE_VERSION }}
           prerelease: true
           files: |
             ./PCL2_CE_Community.exe

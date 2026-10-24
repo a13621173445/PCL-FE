@@ -14,7 +14,7 @@ namespace PCL;
 public class UpdatesCommunityReleaseModel : IUpdateSource
 {
     private const string ReleaseBaseUrl =
-        "https://github.com/a13621173445/PCL-CE/releases/download/community-latest/";
+        "https://github.com/a13621173445/PCL-FE/releases/download/community-latest/";
 
     private const string DefaultAssetUrl = ReleaseBaseUrl + "PCL2_CE_Community.exe";
 

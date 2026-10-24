@@ -26,7 +26,8 @@ public static class HttpSenderExtension
             if(addMetedata)
             {
                 request
-                    .WithHeader("User-Agent", $"PCL-Community/PCL2-CE/{Basics.VersionName} (pclc.cc)")
+                    // 不携带版本号，避免被用于统计各版本的用户数量
+                    .WithHeader("User-Agent", "PCL2 PCL-FE")
                     .WithHeader("Referer", $"https://{Basics.VersionCode}.ce.open.pcl2.server/");
             }
 

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using PCL.Core.App;
@@ -26,7 +26,7 @@ public partial class PageSetupUpdate
         ComboSystemUpdateChannel.SelectedIndex = (int)Config.Update.UpdateChannel;
         ComboSystemUpdateMode.SelectedIndex = (int)Config.Update.UpdateMode;
 
-        TextCurrentVersion.Text = "PCL CE " + VersionNameFormat(ModBase.versionBaseName);
+        TextCurrentVersion.Text = "PCL-FE " + VersionNameFormat(ModBase.versionBaseName);
         ModAnimation.AniEndControl();
         CheckUpdate();
     }
@@ -79,7 +79,7 @@ public partial class PageSetupUpdate
                         UpdateManager.IsCurrentVersionBeta
                             ? UpdateChannel.beta
                             : UpdateChannel.stable, SystemInfo.IsArm64System ? UpdateArch.arm64 : UpdateArch.x64);
-                    TextUpdateName.Text = "PCL CE " + VersionNameFormat(updateInfo.VersionName);
+                    TextUpdateName.Text = "PCL-FE " + VersionNameFormat(updateInfo.VersionName);
                     var summary = updateInfo.Changelog.Between("<summary>", "</summary>");
                     if (!updateInfo.Changelog.Contains("<summary>") || string.IsNullOrWhiteSpace(summary.Trim()))
                         TextChangelog.Text = Lang.Text("Setup.Update.Changelog.Empty");
@@ -256,7 +256,7 @@ public partial class PageSetupUpdate
 
     private void BtnChangelog_Click(object sender, MouseButtonEventArgs e)
     {
-        ModBase.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases/v" + ModBase.versionBaseName);
+        ModBase.OpenWebsite("https://github.com/a13621173445/PCL-FE/releases");
     }
 
     public string VersionNameFormat(string str)
