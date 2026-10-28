@@ -2,6 +2,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using PCL.Core.App;
+using PCL.Core.App.Localization;
 using PCL.Core.IO.Net.Http;
 
 namespace PCL;
